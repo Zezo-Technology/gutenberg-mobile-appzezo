@@ -1,0 +1,15 @@
+# Xcode IDE
+DerivedData/
+xcuserdata/
+
+Pods/
+
+# Ruby tooling
+vendor/bundle/
+
+# Fastlane automation artifacts
+fastlane/README.md
+fastlane/report.xml
+
+# XCFramework build process intermediate and output artifacts
+build

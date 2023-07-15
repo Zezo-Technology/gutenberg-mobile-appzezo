@@ -10,6 +10,7 @@ const {
 	toggleDarkMode,
 	isEditorVisible,
 } = e2eUtils;
+import { NESTED_COLUMNS_3_LEVELS } from './test-editor-data';
 
 describe( 'Gutenberg Editor - Test Suite 1', () => {
 	describe( 'Columns block', () => {
@@ -45,6 +46,9 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 				blockNames.columns
 			);
 			await columnsBlock.click();
+
+			// Navigate upwards in block hierarchy
+			await editorPage.moveBlockSelectionUp( { toRoot: true } );
 			await editorPage.removeBlock();
 		} );
 
@@ -63,7 +67,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 					.elementByAccessibilityId( 'Column Block. Row 1' )
 					.click();
 				const appenderButton = await editorPage.waitForElementToBeDisplayedByXPath(
-					'(//android.view.ViewGroup[@content-desc="block-list"])[2]/android.widget.Button'
+					'//android.widget.Button[@content-desc="Column Block. Row 1"]/android.view.ViewGroup[1]/android.view.ViewGroup/android.widget.Button/android.view.ViewGroup/android.view.ViewGroup'
 				);
 				await appenderButton.click();
 			} else {
@@ -84,10 +88,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 			// Wait for the modal to close
 			await editorPage.driver.sleep( 3000 );
 			// Navigate upwards in block hierarchy
-			await editorPage.driver
-				.elementByAccessibilityId( 'Navigate Up' )
-				.click()
-				.click();
+			await editorPage.moveBlockSelectionUp( { toRoot: true } );
 			await editorPage.driver.sleep( 1000 );
 
 			// Visual test check for portrait orientation
@@ -123,7 +124,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 					.elementByAccessibilityId( 'Column Block. Row 1' )
 					.click();
 				const appenderButton = await editorPage.waitForElementToBeDisplayedByXPath(
-					'(//android.view.ViewGroup[@content-desc="block-list"])[2]/android.widget.Button'
+					'//android.widget.Button[@content-desc="Column Block. Row 1"]/android.view.ViewGroup[1]/android.view.ViewGroup/android.widget.Button/android.view.ViewGroup/android.view.ViewGroup'
 				);
 				await appenderButton.click();
 			} else {
@@ -150,9 +151,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 			expect( screenshot ).toMatchImageSnapshot();
 
 			// Navigate upwards in block hierarchy
-			await editorPage.driver
-				.elementByAccessibilityId( 'Navigate Up' )
-				.click();
+			await editorPage.moveBlockSelectionUp();
 			await editorPage.driver.sleep( 1000 );
 
 			// Visual test check for landscape orientation
@@ -163,9 +162,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 			// Wait for the device to finish rotating
 			await editorPage.driver.sleep( 3000 );
 			// Navigate upwards in block hierarchy
-			await editorPage.driver
-				.elementByAccessibilityId( 'Navigate Up' )
-				.click();
+			await editorPage.moveBlockSelectionUp();
 			await editorPage.driver.sleep( 1000 );
 			await editorPage.removeBlock();
 		} );
@@ -197,7 +194,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 					.elementByAccessibilityId( 'Column Block. Row 1' )
 					.click();
 				const appenderButton = await editorPage.waitForElementToBeDisplayedByXPath(
-					'(//android.view.ViewGroup[@content-desc="block-list"])[2]/android.widget.Button'
+					'//android.widget.Button[@content-desc="Column Block. Row 1"]/android.view.ViewGroup[1]/android.view.ViewGroup/android.widget.Button/android.view.ViewGroup/android.view.ViewGroup'
 				);
 				await appenderButton.click();
 			} else {
@@ -226,11 +223,11 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 			// Wait for the modal to close
 			await editorPage.driver.sleep( 3000 );
 			// Navigate upwards in block hierarchy
-			await editorPage.driver
-				.elementByAccessibilityId( 'Navigate Up' )
-				.click()
-				.click();
+			await editorPage.moveBlockSelectionUp( { toRoot: true } );
 			await editorPage.waitForKeyboardToBeHidden();
+			// Android fails to display the keyboard at times, which can cause the
+			// above `waitForKeyboardToBeHidden` to finish prematurely.
+			await editorPage.driver.sleep( 1000 );
 
 			// Visual test check for nested content
 			screenshot = await takeScreenshot();
@@ -264,6 +261,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 			const cellSize = await cell.getSize();
 			const cellLocation = await cell.getLocation();
 			const scrollOffset = isAndroid() ? 350 : 100;
+			const windowSize = await editorPage.driver.getWindowSize();
 
 			// Reveal default column width cells
 			await swipeFromTo(
@@ -274,7 +272,7 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 				},
 				{
 					x: cellLocation.x + cellSize.width / 2,
-					y: cellLocation.y + cellSize.height / 2 - scrollOffset,
+					y: windowSize.height / 2,
 				},
 				1000
 			);
@@ -300,6 +298,27 @@ describe( 'Gutenberg Editor - Test Suite 1', () => {
 			expect( screenshot ).toMatchImageSnapshot();
 
 			await editorPage.dismissBottomSheet();
+			await editorPage.removeBlock();
+		} );
+
+		it( 'allows deep nesting to at least 3 levels', async () => {
+			await editorPage.setHtmlContent( NESTED_COLUMNS_3_LEVELS );
+
+			// Wait for the block to be rendered
+			await editorPage.driver.sleep( 3000 );
+
+			// Visual test check
+			const screenshot = await takeScreenshot();
+			expect( screenshot ).toMatchImageSnapshot();
+
+			// Remove block
+			const columnsBlock = await editorPage.getBlockAtPosition(
+				blockNames.columns
+			);
+			await columnsBlock.click();
+
+			await editorPage.moveBlockSelectionUp( { toRoot: true } );
+
 			await editorPage.removeBlock();
 		} );
 	} );

@@ -17,10 +17,16 @@ export async function takeScreenshot(
 	options = { withoutKeyboard: false, heightPercentage: undefined }
 ) {
 	const { withoutKeyboard, heightPercentage } = options;
+	const iPadDevice = process.env.IPAD;
 	const orientation = await editorPage.driver.getOrientation();
-	const statusBarHeight = isAndroid() ? 100 : 94;
+	const isPortrait = orientation === 'PORTRAIT';
+	const statusBarHeightIPhone = isPortrait ? 94 : 0;
+	const statusBarHeightIOS = iPadDevice ? 48 : statusBarHeightIPhone;
+	const statusBarHeight = isAndroid() ? 100 : statusBarHeightIOS;
 	const screenshot = await editorPage.driver.takeScreenshot();
-	const widthSize = orientation === 'PORTRAIT' ? 320 : 640;
+	const portraitWidthSize = iPadDevice ? 768 : 320;
+	const landscapeWidthSize = iPadDevice ? 1024 : 640;
+	const widthSize = isPortrait ? portraitWidthSize : landscapeWidthSize;
 
 	const base64Image = Buffer.from( screenshot, 'base64' );
 	const image = await jimp.read( base64Image );
@@ -31,8 +37,8 @@ export async function takeScreenshot(
 		const toolbarElement = await editorPage.getToolbar();
 
 		if ( toolbarElement.length !== 0 ) {
-			const toolbarSize = await toolbarElement[ 0 ].getSize();
-			const toolbarLocation = await toolbarElement[ 0 ].getLocation();
+			const toolbarSize = await toolbarElement.getSize();
+			const toolbarLocation = await toolbarElement.getLocation();
 			const offset =
 				windowSize.height - ( toolbarLocation.y + toolbarSize.height );
 			const imageHeight = isAndroid()

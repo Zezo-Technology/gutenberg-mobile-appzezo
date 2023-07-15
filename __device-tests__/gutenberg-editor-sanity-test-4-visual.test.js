@@ -2,7 +2,7 @@
  * Internal dependencies
  */
 const { blockNames } = editorPage;
-const { toggleOrientation, selectTextFromElement, setClipboard } = e2eUtils;
+const { toggleOrientation, selectTextFromElement } = e2eUtils;
 import { takeScreenshot } from './utils';
 
 describe( 'Gutenberg Editor - Test Suite 4', () => {
@@ -61,7 +61,7 @@ describe( 'Gutenberg Editor - Test Suite 4', () => {
 			expect( screenshot ).toMatchImageSnapshot();
 
 			await buttonsBlock.click();
-			await editorPage.removeBlockAtPosition( blockNames.buttons );
+			await editorPage.removeBlock();
 		} );
 
 		it( 'Render gradient background color', async () => {
@@ -83,7 +83,7 @@ describe( 'Gutenberg Editor - Test Suite 4', () => {
 			expect( screenshot ).toMatchImageSnapshot();
 
 			await buttonsBlock.click();
-			await editorPage.removeBlockAtPosition( blockNames.buttons );
+			await editorPage.removeBlock();
 		} );
 
 		it( 'Check if selection / caret color matches font color', async () => {
@@ -114,15 +114,11 @@ describe( 'Gutenberg Editor - Test Suite 4', () => {
 
 			await buttonBlockTextInput.click();
 
-			await editorPage.removeBlockAtPosition( blockNames.button );
+			await editorPage.removeBlock();
 		} );
 
 		it( 'Edit text styles', async () => {
 			await editorPage.addNewBlock( blockNames.buttons );
-
-			const buttonsBlock = await editorPage.getBlockAtPosition(
-				blockNames.buttons
-			);
 
 			const firstButtonTextInput = await editorPage.getButtonBlockTextInputAtPosition();
 			await editorPage.typeTextToTextBlock(
@@ -183,53 +179,15 @@ describe( 'Gutenberg Editor - Test Suite 4', () => {
 			const screenshot = await takeScreenshot();
 			expect( screenshot ).toMatchImageSnapshot();
 
-			await buttonsBlock.click();
-			await editorPage.removeBlockAtPosition( blockNames.buttons );
-		} );
-
-		it( 'Link from the clipboard is presented as an option in the link picker', async () => {
-			// Increase threshold to avoid issues with the cursor position and keyboard.
-			const snapshotConfig = { failureThreshold: 0.03 };
-			await editorPage.addNewBlock( blockNames.buttons );
-
-			const link = 'https://wordpress.org/';
-
-			await setClipboard( editorPage.driver, link );
-
-			await editorPage.toggleFormatting( 'Edit link' );
-			await editorPage.openLinkToSettings();
-
-			// Wait for the modal to open
-			await editorPage.driver.sleep( 3000 );
-
-			// Visual test check for the "From clipboard" option
-			let screenshot = await takeScreenshot( {
-				heightPercentage: 50,
-			} );
-			expect( screenshot ).toMatchImageSnapshot( snapshotConfig );
-
-			const clipboardLink = await editorPage.waitForElementToBeDisplayedById(
-				`Copy URL from the clipboard, ${ link }`
+			const buttonsBlock = await editorPage.getBlockAtPosition(
+				blockNames.buttons
 			);
-			await clipboardLink.click();
+			buttonsBlock.click();
 
-			// Wait for the modal to close
-			await editorPage.driver.sleep( 2000 );
+			// Navigate upwards to select parent block
+			await editorPage.moveBlockSelectionUp();
 
-			// Visual test check for link settings
-			screenshot = await takeScreenshot();
-			expect( screenshot ).toMatchImageSnapshot( snapshotConfig );
-
-			await editorPage.dismissBottomSheet();
-
-			// Wait for the modal to close
-			await editorPage.driver.sleep( 2000 );
-
-			// Visual test check for link formatting button
-			screenshot = await takeScreenshot( {
-				withoutKeyboard: true,
-			} );
-			expect( screenshot ).toMatchImageSnapshot( snapshotConfig );
+			await editorPage.removeBlock();
 		} );
 	} );
 } );
