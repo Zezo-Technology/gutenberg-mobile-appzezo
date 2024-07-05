@@ -12,6 +12,7 @@
 .env.test.local
 .env.production.local
 run-jetpack-command.sh.local
+run-block-experiments-command.sh.local
 
 npm-debug.log*
 yarn-debug.log*
