@@ -5,6 +5,7 @@ Unreleased
 * [*] Fix issue when pasting HTML content [https://github.com/wordpress-mobile/gutenberg-mobile/pull/6933]
 * [**] Add support prefix transforms [https://github.com/wordpress-mobile/gutenberg-mobile/pull/6932]
 * [*] Remove themes from the allowed API endpoint list [https://github.com/wordpress-mobile/gutenberg-mobile/pull/6967]
+* [*] Remove Gallery Block V1 and other experimental flags  [https://github.com/wordpress-mobile/gutenberg-mobile/pull/6973]
 
 1.120.1
 ---
