@@ -230,6 +230,7 @@
     <string name="gutenberg_native_link_label" tools:ignore="UnusedResources">Link label</string>
     <string name="gutenberg_native_link_rel" tools:ignore="UnusedResources">Link Rel</string>
     <string name="gutenberg_native_link_settings" tools:ignore="UnusedResources">Link Settings</string>
+    <string name="gutenberg_native_link_text" tools:ignore="UnusedResources">Link text</string>
     <string name="gutenberg_native_link_to" tools:ignore="UnusedResources">Link To</string>
     <string name="gutenberg_native_loading" tools:ignore="UnusedResources">Loading</string>
     <string name="gutenberg_native_lock_icon" tools:ignore="UnusedResources">Lock icon</string>
@@ -253,8 +254,6 @@
     <!-- translators: accessibility text. %1: current block position (number). %2: next block position (number) -->
     <string name="gutenberg_native_move_block_up_from_row_1_s_to_row_2_s" tools:ignore="UnusedResources">Move block up from row %1$s to row %2$s</string>
     <string name="gutenberg_native_move_blocks" tools:ignore="UnusedResources">Move blocks</string>
-    <string name="gutenberg_native_move_image_backward" tools:ignore="UnusedResources">Move Image Backward</string>
-    <string name="gutenberg_native_move_image_forward" tools:ignore="UnusedResources">Move Image Forward</string>
     <string name="gutenberg_native_move_to_bottom" tools:ignore="UnusedResources">Move to bottom</string>
     <string name="gutenberg_native_move_to_top" tools:ignore="UnusedResources">Move to top</string>
     <string name="gutenberg_native_navigate_up" tools:ignore="UnusedResources">Navigate Up</string>
@@ -316,6 +315,7 @@ translators: %s: Select control button label e.g. "Button width" -->
     <string name="gutenberg_native_replace_audio" tools:ignore="UnusedResources">Replace audio</string>
     <string name="gutenberg_native_replace_current_block" tools:ignore="UnusedResources">Replace Current Block</string>
     <string name="gutenberg_native_replace_file" tools:ignore="UnusedResources">Replace file</string>
+    <string name="gutenberg_native_replace_image" tools:ignore="UnusedResources">Replace image</string>
     <string name="gutenberg_native_replace_image_or_video" tools:ignore="UnusedResources">Replace image or video</string>
     <string name="gutenberg_native_replace_video" tools:ignore="UnusedResources">Replace video</string>
     <string name="gutenberg_native_retry" tools:ignore="UnusedResources">Retry</string>
@@ -355,7 +355,6 @@ translators: %s: Block name e.g. "Image block" -->
     <string name="gutenberg_native_search_blocks" tools:ignore="UnusedResources">Search blocks</string>
     <string name="gutenberg_native_search_button_current_button_text_is" tools:ignore="UnusedResources">Search button. Current button text is</string>
     <string name="gutenberg_native_search_input_field" tools:ignore="UnusedResources">Search input field.</string>
-    <string name="gutenberg_native_search_or_type_url" tools:ignore="UnusedResources">Search or type URL</string>
     <string name="gutenberg_native_search_settings" tools:ignore="UnusedResources">Search settings</string>
     <string name="gutenberg_native_select_a_color" tools:ignore="UnusedResources">Select a color</string>
     <string name="gutenberg_native_select_a_color_above" tools:ignore="UnusedResources">Select a color above</string>
