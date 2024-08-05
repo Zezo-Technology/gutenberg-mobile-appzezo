@@ -14,7 +14,7 @@ import {
  * External dependencies
  */
 import {
-	act,
+	dismissModal,
 	fireEvent,
 	getBlock,
 	getEditorHtml,
@@ -27,7 +27,6 @@ import {
 	setupApiFetch,
 } from 'test/helpers';
 import { ActionSheetIOS } from 'react-native';
-import prompt from 'react-native-prompt-android';
 
 /**
  * Internal dependencies
@@ -44,7 +43,6 @@ import {
 } from './local-helpers/constants';
 
 jest.mock( '@wordpress/api-fetch' );
-jest.mock( 'react-native-prompt-android', () => jest.fn() );
 
 const initialHtml = VIDEOPRESS_EMPTY_BLOCK_HTML;
 const FETCH_ITEMS = generateFetchMocks();
@@ -76,15 +74,12 @@ beforeEach( () => {
 describe( 'VideoPress block - Uploads', () => {
 	it( 'displays media options picker when selecting the block', async () => {
 		// Initialize with an empty gallery
-		const {
-			getByLabelText,
-			getByText,
-			getByTestId,
-		} = await initializeEditor( {
-			initialHtml,
-		} );
+		const { getByLabelText, getByText, getByTestId } =
+			await initializeEditor( {
+				initialHtml,
+			} );
 
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 
 		// Observe that media options picker is displayed
 		if ( Platform.isIOS ) {
@@ -125,10 +120,8 @@ describe( 'VideoPress block - Uploads', () => {
 		};
 
 		const { notifyUploadingState, notifySucceedState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 
 		const screen = await initializeEditor( {
 			initialHtml,
@@ -143,7 +136,7 @@ describe( 'VideoPress block - Uploads', () => {
 		expect( block ).toBeVisible();
 
 		// Upload video from device
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 		selectOption( 'Choose from device' );
 		expectMediaPickerCall( 'DEVICE_MEDIA_LIBRARY', [ 'video' ], false );
 
@@ -211,10 +204,8 @@ describe( 'VideoPress block - Uploads', () => {
 				videopressGUID: VIDEOPRESS_GUID,
 			},
 		};
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 
 		const screen = await initializeEditor( {
 			initialHtml,
@@ -229,7 +220,7 @@ describe( 'VideoPress block - Uploads', () => {
 		expect( block ).toBeVisible();
 
 		// Add video from WordPress media library
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 		selectOption( 'WordPress Media Library' );
 		expectMediaPickerCall( 'SITE_MEDIA_LIBRARY', [ 'video' ], false );
 
@@ -278,10 +269,8 @@ describe( 'VideoPress block - Uploads', () => {
 		};
 
 		const { notifyUploadingState, notifySucceedState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 
 		const screen = await initializeEditor( {
 			initialHtml,
@@ -296,7 +285,7 @@ describe( 'VideoPress block - Uploads', () => {
 		expect( block ).toBeVisible();
 
 		// Take a video and upload it
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 		selectOption( 'Take a Video' );
 		expectMediaPickerCall( 'DEVICE_CAMERA', [ 'video' ], false );
 
@@ -356,15 +345,11 @@ describe( 'VideoPress block - Uploads', () => {
 	} );
 
 	it( 'adds video by inserting URL', async () => {
-		let promptApply;
-		prompt.mockImplementation( ( title, message, [ , apply ] ) => {
-			promptApply = apply.onPress;
-		} );
-
 		const screen = await initializeEditor( {
 			initialHtml,
 		} );
-		const { getByText, getByTestId } = screen;
+		const { getByText, getByTestId, getByPlaceholderText, findByTestId } =
+			screen;
 		const { selectOption } = setupPicker( screen, MEDIA_OPTIONS );
 		// Clear previous calls to `apiFetch`
 		apiFetch.mockClear();
@@ -374,14 +359,24 @@ describe( 'VideoPress block - Uploads', () => {
 		expect( block ).toBeVisible();
 
 		// Insert video from URL
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 		selectOption( 'Insert from URL' );
-		expect( prompt ).toHaveBeenCalled();
-
-		// Mock prompt dialog
-		await act( () =>
-			promptApply( `https://videopress.com/v/${ VIDEOPRESS_GUID }` )
+		fireEvent.changeText(
+			getByPlaceholderText( 'Type a URL' ),
+			`https://videopress.com/v/${ VIDEOPRESS_GUID }`
 		);
+		dismissModal( getByTestId( 'bottom-sheet' ) );
+
+		// Check loading overlay is displayed before the player is ready
+		expect( within( block ).getByText( 'Loading' ) ).toBeVisible();
+
+		// Notify the player is ready
+		const player = await findByTestId( 'videopress-player' );
+		sendWebViewMessage( player, {
+			type: 'message',
+			event: 'videopress_ready',
+		} );
+		expect( player ).toBeVisible();
 
 		// Requests:
 		//  - Token request
@@ -391,17 +386,6 @@ describe( 'VideoPress block - Uploads', () => {
 		FETCH_ITEMS.forEach( ( fetch ) =>
 			expect( apiFetch ).toHaveBeenCalledWith( fetch.request )
 		);
-
-		// Check loading overlay is displayed before the player is ready
-		expect( within( block ).getByText( 'Loading' ) ).toBeVisible();
-
-		// Notify the player is ready
-		const player = getByTestId( 'videopress-player' );
-		sendWebViewMessage( player, {
-			type: 'message',
-			event: 'videopress_ready',
-		} );
-		expect( player ).toBeVisible();
 
 		// At this point the player should be showing the conversion state.
 		// Hence, let's notify the loaded state.
@@ -498,10 +482,8 @@ describe( 'VideoPress block - Uploads', () => {
 		};
 
 		const { notifyUploadingState, notifyFailedState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 
 		const screen = await initializeEditor( {
 			initialHtml,
@@ -514,7 +496,7 @@ describe( 'VideoPress block - Uploads', () => {
 		expect( block ).toBeVisible();
 
 		// Upload video from device
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 		selectOption( 'Choose from device' );
 		expectMediaPickerCall( 'DEVICE_MEDIA_LIBRARY', [ 'video' ], false );
 
@@ -548,10 +530,8 @@ describe( 'VideoPress block - Uploads', () => {
 		};
 
 		const { notifyUploadingState, notifyResetState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 
 		const screen = await initializeEditor( {
 			initialHtml,
@@ -564,7 +544,7 @@ describe( 'VideoPress block - Uploads', () => {
 		expect( block ).toBeVisible();
 
 		// Upload video from device
-		fireEvent.press( getByText( 'ADD VIDEO' ) );
+		fireEvent.press( getByText( 'Add video' ) );
 		selectOption( 'Choose from device' );
 		expectMediaPickerCall( 'DEVICE_MEDIA_LIBRARY', [ 'video' ], false );
 

@@ -1,5 +1,11 @@
 # WordPress iOS Integration Guide
 
+## Table of Contents
+
+1. [How to work with local gutenberg-mobile checkout](#how-to-work-with-local-gutenberg-mobile-checkout)
+2. [How to test a gutenberg-mobile PR in WPiOS](#how-to-test-a-gutenberg-mobile-pr-in-wpios)
+3. [How to work with Aztec in WPiOS](#how-to-work-with-aztec-in-wpios)
+
 ## How to work with local gutenberg-mobile checkout
 
 The `LOCAL_GUTENBERG` environment variable is useful when you want to iterate on the native iOS code (Swift, Objective-C) in `gutenberg-mobile` while testing it inside the [WPiOS](https://github.com/wordpress-mobile/WordPress-iOS) app. This also includes the case when you update a dependency in `gutenberg-mobile` that includes native code.
@@ -14,7 +20,9 @@ By default `LOCAL_GUTENBERG` is set to `../gutenberg-mobile`.
 ```sh
 LOCAL_GUTENBERG=true bundle exec pod install
 ```
+
 2. (b) Otherwise pass in the relative `gutenberg-mobile` folder like this:
+
 ```sh
 LOCAL_GUTENBERG=../../xyz/gutenberg-mobile bundle exec pod install
 ```
@@ -28,10 +36,10 @@ LOCAL_GUTENBERG=../../xyz/gutenberg-mobile bundle exec pod install
 
 Assuming that there is no open WPiOS PR:
 
-1. Open `Podfile` in WPiOS project
-2. Find the line where gutenberg reference is set like: `gutenberg :tag => 'vX.YY.Z'`
+1. Open `Gutenberg/config.yml` from the root of WPiOS directory
+2. Find the line where gutenberg reference is set: `tag: v1.110.0`
 3. Find latest commit hash of the `gutenberg-mobile` PR
-4. Replace the gutenberg reference with the commit hash: `gutenberg :commit => '123456789'`
+4. Remove the line referencing the tag (e.g., `tag: v1.110.0`) and add a line referencing the commit: `commit: 123456789`
 5. Run `bundle exec pod install` inside WPiOS
 6. Switch to the relevant branch in `gutenberg-mobile`and start the metro server with `npm run start:reset`
 7. Launch the WPiOS workspace (`.xcworkspace`) in Xcode and run the app
@@ -50,6 +58,36 @@ Assuming that there is no open WPiOS PR:
 14. Merge the `gutenberg-mobile` PR (make sure the bundles are up-to-date before merging)
 15. Tag the merge commit bumping the latest tag's minor version and adding an `-alphaQ` to the end like: `v1.50.0 -> v1.51.0-alpha1`
 16. If there's already an alpha, the alpha version could be increased like: `v1.51.0-alpha1` -> `v1.51.0-alpha2`
-17. Open the `Podfile` again and update the gutenberg reference to use the new alpha tag: `gutenberg :tag => 'v1.51.0-alpha2'`
+17. Open the `Gutenberg/config.yml` again and update the gutenberg reference to use the new alpha tag: `tag: v1.51.0-alpha2`
 18. Run `bundle exec pod install`
 19. Commit and push the changes to `Podfile` and `Podfile.lock` 
+
+## How to work with Aztec in WPiOS
+
+1. While running WPiOS, changes can be made directly to the [Aztec iOS](https://github.com/wordpress-mobile/AztecEditor-iOS) codebase.
+2. Create a PR directly in the AztecEditor-iOS repository.
+
+**Additionally to share a WPiOS installable build**
+
+> **Note**: These steps are to be considered a fragile hack used for the sole purpose of creating installable builds for testing PRs changes. If the main Aztec version changes in the process creating/testing the installable build, it may fail.
+
+3. In the `gutenberg-mobile` repo, navigate to the `ios-xcframework/Podfile` file and uncomment the following line:
+
+```
+# pod 'WordPress-Aztec-iOS', git: 'https://github.com/wordpress-mobile/WordPress-Aztec-iOS.git', commit: ''
+```
+
+4. Update the `commit` argument with the latest hash from your open Aztec PR.
+5. After changing, run `bundle exec pod install` to update the Podfile.lock.
+6. Push the changes to a new `gutenberg-mobile` PR.
+7. Next, in the WPiOS repository, follow the [instructions in the WPiOS' Podfile](https://github.com/wordpress-mobile/WordPress-iOS/blob/d7240e17101644dbfb796b37ff848c2441add985/Podfile#L33-L42) to de-comment the lines with a `commit` argument and comment out the default line that points to a tag.
+8. Update the `commit` argument to reference the hash from your open PR and push the changes
+9. In `Gutenberg/config.yml`, update the commit hash to the `gutenberg-mobile` PR you created.
+10. Run `bundle exec pod install`.
+
+**Additionally to incorporate a merged Aztec change**
+
+11. After your Aztec PR has been tested, approved, and merged, go through the steps to draft and publish a new release via [the releases pages](https://github.com/wordpress-mobile/AztecEditor-iOS/releases).
+12. In Gutenberg, update the Aztec tag found under `packages/react-native-aztec/RNTAztecView.podspec`.
+13. In Gutenberg Mobile, update the Aztec tag found under `ios-xcframework/Podfile`. Remember to update the Gutenberg submodule reference following the change in the previous step.
+14. In WPiOS, update the Aztec tag found in the Podfile. Remember to also follow the steps to point to your latest Gutenberg Mobile changes.

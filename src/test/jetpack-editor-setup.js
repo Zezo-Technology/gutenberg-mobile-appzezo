@@ -7,9 +7,11 @@ import {
 	unregisterBlockType,
 	unregisterBlockVariation,
 } from '@wordpress/blocks';
+import { store as preferencesStore } from '@wordpress/preferences';
 import { select } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
-import { removeAllFilters } from '@wordpress/hooks';
+import { applyFilters, removeAllFilters } from '@wordpress/hooks';
+import { initializeEditor } from 'test/helpers';
 
 /**
  * Internal dependencies
@@ -17,7 +19,7 @@ import { removeAllFilters } from '@wordpress/hooks';
 import getJetpackData, {
 	JETPACK_DATA_PATH,
 } from '../../jetpack/projects/js-packages/shared-extension-utils/src/get-jetpack-data';
-import {
+import setupJetpackEditorHooks, {
 	registerJetpackBlocks,
 	registerJetpackEmbedVariations,
 	setupJetpackEditor,
@@ -26,7 +28,6 @@ import {
 const defaultJetpackData = { blogId: 1, isJetpackActive: true };
 const defaultProps = {
 	capabilities: {
-		mediaFilesCollectionBlock: true,
 		contactInfoBlock: true,
 		facebookEmbed: true,
 		instagramEmbed: true,
@@ -36,7 +37,7 @@ const defaultProps = {
 };
 const jetpackBlocks = [
 	'jetpack/contact-info',
-	'jetpack/story',
+	'jetpack/paywall',
 	'jetpack/tiled-gallery',
 	'videopress/video',
 ];
@@ -73,7 +74,7 @@ describe( 'Jetpack blocks', () => {
 		const expectedJetpackData = {
 			available_blocks: {
 				'contact-info': { available: true },
-				story: { available: true },
+				paywall: { available: true },
 				'tiled-gallery': { available: true },
 				'videopress/video': { available: true },
 			},
@@ -89,11 +90,22 @@ describe( 'Jetpack blocks', () => {
 
 	it( 'should register Jetpack blocks if Jetpack is active', () => {
 		setupJetpackEditor( defaultJetpackData );
-		const blocksAPI = registerJetpackBlocksIsolated( defaultProps );
+		registerJetpackBlocks( defaultProps );
 
-		const registeredBlocks = blocksAPI
-			.getBlockTypes()
-			.map( ( block ) => block.name );
+		const registeredBlocks = getBlockTypes().map( ( block ) => block.name );
+
+		expect( console ).toHaveLoggedWith(
+			'Block jetpack/contact-info registered.'
+		);
+		expect( console ).toHaveLoggedWith(
+			'Block jetpack/paywall registered.'
+		);
+		expect( console ).toHaveLoggedWith(
+			'Block jetpack/tiled-gallery registered.'
+		);
+		expect( console ).toHaveLoggedWith(
+			'Block videopress/video registered.'
+		);
 		expect( registeredBlocks ).toEqual(
 			expect.arrayContaining( jetpackBlocks )
 		);
@@ -111,20 +123,27 @@ describe( 'Jetpack blocks', () => {
 
 	it( 'should hide Jetpack blocks by capabilities', () => {
 		setupJetpackEditor( defaultJetpackData );
-		registerJetpackBlocksIsolated( {
+		registerJetpackBlocks( {
 			capabilities: {
-				mediaFilesCollectionBlock: true,
 				contactInfoBlock: false,
+				paywallBlock: true,
 				tiledGalleryBlock: true,
 				videoPressBlock: true,
 			},
 		} );
 
-		const hiddenBlockTypes = select( 'core/preferences' ).get(
-			'core/edit-post',
+		const registeredBlocks = getBlockTypes().map( ( block ) => block.name );
+		const hiddenBlockTypes = select( preferencesStore ).get(
+			'core',
 			'hiddenBlockTypes'
 		);
-		expect( hiddenBlockTypes ).toEqual( [ 'jetpack/contact-info' ] );
+		expect( hiddenBlockTypes ).toEqual( [
+			'jetpack/paywall',
+			'jetpack/contact-info',
+		] );
+		expect( registeredBlocks ).toEqual(
+			expect.arrayContaining( jetpackBlocks )
+		);
 	} );
 
 	it( "should not register Jetpack blocks if 'onlyCoreBlocks' capbility is on", () => {
@@ -140,6 +159,35 @@ describe( 'Jetpack blocks', () => {
 			.getBlockTypes()
 			.map( ( block ) => block.name );
 		expect( registeredBlocks ).toEqual( [] );
+	} );
+
+	it( 'sets `null` value in unsupported block details of Missing block when only core blocks are available', async () => {
+		setupJetpackEditorHooks();
+		await initializeEditor( {
+			capabilities: {
+				// Force only core blocks
+				onlyCoreBlocks: true,
+			},
+		} );
+
+		const defaultText = 'default-text';
+		const tryOverrideString = ( blockName ) =>
+			applyFilters(
+				'native.missing_block_detail',
+				defaultText,
+				blockName
+			);
+
+		// The following Jetpack blocks are not available, hence the string won't be overridden.
+		expect( tryOverrideString( 'contact-info' ) ).toBe( defaultText );
+		expect( tryOverrideString( 'video' ) ).toBe( defaultText );
+		expect( tryOverrideString( 'non-existing-jetpack-block' ) ).toBe(
+			defaultText
+		);
+
+		// The following blocks are available, hence the string will be overridden with `null` value.
+		expect( tryOverrideString( 'jetpack/contact-info' ) ).toBeNull();
+		expect( tryOverrideString( 'videopress/video' ) ).toBeNull();
 	} );
 
 	describe( 'Jetpack embed variations', () => {

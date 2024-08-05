@@ -2,34 +2,59 @@
  * Internal dependencies
  */
 const { blockNames } = editorPage;
-import { takeScreenshot } from './utils';
+const { toggleDarkMode } = e2eUtils;
+import { takeScreenshot, takeScreenshotByElement } from './utils';
 
 describe( 'Gutenberg Editor Visual test for Gallery Block', () => {
 	it( 'should be able to render the placeholder correctly', async () => {
+		await editorPage.initializeEditor();
 		await editorPage.addNewBlock( blockNames.gallery );
-		await editorPage.closePicker();
+		await editorPage.closeMediaPicker();
 
-		// Visual test check
-		const screenshot = await takeScreenshot();
+		// Wait for the bottom sheet to hide
+		await editorPage.driver.pause( 3000 );
+
+		const block = await editorPage.getBlockAtPosition( blockNames.gallery );
+
+		const screenshot = await takeScreenshotByElement( block, {
+			padding: 7,
+		} );
+
 		expect( screenshot ).toMatchImageSnapshot();
-
-		await editorPage.removeBlock();
 	} );
 
 	it( 'should be able to render a gallery correctly', async () => {
-		await editorPage.setHtmlContent(
-			[ e2eTestData.galleryBlock ].join( '\n\n' )
-		);
+		await editorPage.initializeEditor( {
+			initialData: [ e2eTestData.galleryBlock ].join( '\n\n' ),
+		} );
 		const galleryBlock = await editorPage.getBlockAtPosition(
 			blockNames.gallery
 		);
 		expect( galleryBlock ).toBeTruthy();
 
 		// Wait for images to load
-		await editorPage.driver.sleep( 5000 );
+		await editorPage.driver.pause( 8000 );
 
 		// Visual test check
 		const screenshot = await takeScreenshot();
+		expect( screenshot ).toMatchImageSnapshot();
+	} );
+
+	it( 'should display correct colors for dark mode', async () => {
+		await toggleDarkMode( editorPage.driver, true );
+		await editorPage.initializeEditor( {
+			initialData: [ e2eTestData.galleryBlockTwoImages ].join( '\n\n' ),
+		} );
+
+		const block = await editorPage.selectBlock(
+			await editorPage.getBlockAtPosition( blockNames.gallery )
+		);
+		await editorPage.driver.pause( 8000 ); // Wait for images to load
+
+		const screenshot = await takeScreenshotByElement( block, {
+			padding: 7,
+		} );
+		await toggleDarkMode( editorPage.driver, false );
 		expect( screenshot ).toMatchImageSnapshot();
 	} );
 } );

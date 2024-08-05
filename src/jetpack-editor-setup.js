@@ -17,14 +17,13 @@ import {
 	registerLoomVariation,
 	registerSmartframeVariation,
 } from '../jetpack/projects/plugins/jetpack/extensions/extended-blocks/core-embed';
-import '../jetpack/projects/plugins/jetpack/extensions/blocks/videopress/editor';
 
 // When adding new blocks to this list please also consider updating `./block-support/supported-blocks.json`
 const supportedJetpackBlocks = {
 	'contact-info': {
 		available: true,
 	},
-	story: {
+	paywall: {
 		available: true,
 	},
 	'tiled-gallery': {
@@ -77,10 +76,6 @@ export function registerJetpackBlocks( { capabilities } ) {
 	}
 
 	hideBlockByCapability(
-		capabilities.mediaFilesCollectionBlock,
-		'jetpack/story'
-	);
-	hideBlockByCapability(
 		capabilities.contactInfoBlock,
 		'jetpack/contact-info'
 	);
@@ -89,6 +84,8 @@ export function registerJetpackBlocks( { capabilities } ) {
 		'jetpack/tiled-gallery'
 	);
 	hideBlockByCapability( capabilities.videoPressBlock, 'videopress/video' );
+	// Limit support to rendering the Paywall block, not inserting it.
+	dispatch( editPostStore ).hideBlockTypes( [ 'jetpack/paywall' ] );
 
 	// Register Jetpack blocks
 	require( '../jetpack/projects/plugins/jetpack/extensions/editor' );
@@ -131,6 +128,14 @@ export function registerJetpackEmbedVariations( { capabilities } ) {
 	} );
 }
 
+export function enableVideoPressV5Support( { capabilities } ) {
+	if ( ! isActive() || ! capabilities.videoPressV5Support ) {
+		return;
+	}
+
+	require( '../jetpack/projects/plugins/jetpack/extensions/blocks/videopress/editor' );
+}
+
 const setupHooks = () => {
 	// Hook triggered before the editor is rendered
 	addAction( 'native.pre-render', 'gutenberg-mobile-jetpack', ( props ) => {
@@ -144,12 +149,21 @@ const setupHooks = () => {
 		// block type registration, so it’s required to add them before
 		// the core blocks are registered.
 		registerJetpackEmbedVariations( props );
+
+		// VideoPress v5 conversion also uses WP hooks that are attached to
+		// block type registration, so it’s required to add them before
+		// the core blocks are registered.
+		enableVideoPressV5Support( props );
 	} );
 
 	// Hook triggered after the editor is rendered
-	addAction( 'native.render', 'gutenberg-mobile-jetpack', ( props ) => {
-		registerJetpackBlocks( props );
-	} );
+	addAction(
+		'native.post-register-core-blocks',
+		'gutenberg-mobile-jetpack',
+		( props ) => {
+			registerJetpackBlocks( props );
+		}
+	);
 };
 
 const setupStringsOverrides = () => {
@@ -160,16 +174,15 @@ const setupStringsOverrides = () => {
 			const { capabilities } = select( blockEditorStore ).getSettings();
 			const onlyCoreBlocks = capabilities?.onlyCoreBlocks === true;
 
-			const jetpackBlockNames = Object.keys( supportedJetpackBlocks ).map(
-				( name ) => `jetpack/${ name }`
+			const namespacedBlockNames = Object.keys(
+				supportedJetpackBlocks
+			).map( ( name ) =>
+				/^(\w|-)+$/.test( name ) ? `jetpack/${ name }` : name
 			);
-
-			const videoPressBlock = blockName === 'videopress/video';
 
 			if (
 				onlyCoreBlocks &&
-				jetpackBlockNames.includes( blockName ) &&
-				videoPressBlock
+				namespacedBlockNames.includes( blockName )
 			) {
 				return null;
 			}

@@ -4,13 +4,12 @@
 import { dispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { requestImageUploadCancelDialog } from '@wordpress/react-native-bridge';
-import prompt from 'react-native-prompt-android';
 
 /**
  * External dependencies
  */
 import {
-	act,
+	dismissModal,
 	fireEvent,
 	getBlock,
 	getEditorHtml,
@@ -37,11 +36,11 @@ import {
 	generateRemoteMedia,
 	generateLocalMedia,
 	generateLibraryMedia,
+	sendWebViewMessage,
 } from './local-helpers/utils';
 import { MEDIA_OPTIONS } from './local-helpers/constants';
 
 jest.mock( '@wordpress/api-fetch' );
-jest.mock( 'react-native-prompt-android', () => jest.fn() );
 
 const GUID_INITIAL_VIDEO = 'OLDxGUID';
 const GUID_REPLACE_VIDEO = 'NEWxGUID';
@@ -50,8 +49,13 @@ setupCoreBlocks();
 
 beforeAll( () => {
 	// Register VideoPress block
-	setupJetpackEditor( { blogId: 1, isJetpackActive: true } );
-	registerJetpackBlocks( { capabilities: { videoPressBlock: true } } );
+	setupJetpackEditor( {
+		blogId: 1,
+		isJetpackActive: true,
+	} );
+	registerJetpackBlocks( {
+		capabilities: { videoPressBlock: true },
+	} );
 } );
 
 beforeEach( () => {
@@ -74,6 +78,9 @@ beforeEach( () => {
 
 describe( 'VideoPress block - Replace', () => {
 	it( 'displays media options picker when replacing the video', async () => {
+		// Mock API responses for default VideoPress GUID
+		setupApiFetch( generateFetchMocks() );
+
 		const screen = await initializeEditor( {
 			initialHtml: generateBlockHTML(),
 		} );
@@ -109,10 +116,8 @@ describe( 'VideoPress block - Replace', () => {
 
 		// Setup pickers and media upload
 		const { notifySucceedState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 		const { selectOption } = setupPicker( screen, MEDIA_OPTIONS );
 
 		// Mock API responses for new block
@@ -158,10 +163,8 @@ describe( 'VideoPress block - Replace', () => {
 
 		// Setup pickers and media upload
 		const { notifySucceedState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 		const { selectOption } = setupPicker( screen, MEDIA_OPTIONS );
 
 		// Mock API responses for new block
@@ -206,10 +209,8 @@ describe( 'VideoPress block - Replace', () => {
 		expect( getEditorHtml() ).toMatchSnapshot( 'before replacing video' );
 
 		// Setup pickers
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 		const { selectOption } = setupPicker( screen, MEDIA_OPTIONS );
 
 		// Mock API responses for new block
@@ -240,7 +241,12 @@ describe( 'VideoPress block - Replace', () => {
 		const screen = await initializeEditor( {
 			initialHtml: generateBlockHTML( { guid: GUID_INITIAL_VIDEO } ),
 		} );
-		const { getByLabelText, getByTestId } = screen;
+		const {
+			getByLabelText,
+			getByTestId,
+			getByPlaceholderText,
+			findByTestId,
+		} = screen;
 
 		// Block is visible
 		const block = await getBlock( screen, 'VideoPress' );
@@ -262,21 +268,20 @@ describe( 'VideoPress block - Replace', () => {
 			} )
 		);
 
-		// Mock prompt dialog
-		let promptApply;
-		prompt.mockImplementation( ( title, message, [ , apply ] ) => {
-			promptApply = apply.onPress;
-		} );
-
 		// Replace video
 		fireEvent.press( getByLabelText( 'Edit video' ) );
 
 		// Insert video from URL
 		selectOption( 'Insert from URL' );
-		expect( prompt ).toHaveBeenCalled();
-		await act( () =>
-			promptApply( `https://videopress.com/v/${ GUID_REPLACE_VIDEO }` )
+		fireEvent.changeText(
+			getByPlaceholderText( 'Type a URL' ),
+			`https://videopress.com/v/${ GUID_REPLACE_VIDEO }`
 		);
+		dismissModal( getByTestId( 'bottom-sheet' ) );
+		sendWebViewMessage( await findByTestId( 'videopress-player' ), {
+			type: 'message',
+			event: 'videopress_ready',
+		} );
 
 		expect( getByTestId( 'videopress-player' ) ).toBeVisible();
 		expect( getEditorHtml() ).toMatchSnapshot( 'after replacing video' );
@@ -297,10 +302,8 @@ describe( 'VideoPress block - Replace', () => {
 
 		// Setup pickers and media upload
 		const { notifyUploadingState, notifyResetState } = setupMediaUpload();
-		const {
-			expectMediaPickerCall,
-			mediaPickerCallback,
-		} = setupMediaPicker();
+		const { expectMediaPickerCall, mediaPickerCallback } =
+			setupMediaPicker();
 		const { selectOption } = setupPicker( screen, MEDIA_OPTIONS );
 
 		// Mock API responses for new block
@@ -327,6 +330,15 @@ describe( 'VideoPress block - Replace', () => {
 		const uploadingVideoView = getByTestId( 'videopress-uploading-video' );
 		expect( uploadingVideoView ).toBeVisible();
 
+		// Restores mocks for API requests of initial video
+		setupApiFetch(
+			generateFetchMocks( {
+				guid: GUID_INITIAL_VIDEO,
+				metadata: {
+					title: 'Video to be replaced',
+				},
+			} )
+		);
 		// Cancel upload
 		fireEvent.press( uploadingVideoView );
 		expect( requestImageUploadCancelDialog ).toHaveBeenCalledWith(

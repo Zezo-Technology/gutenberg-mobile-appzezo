@@ -20,7 +20,6 @@ const transpiledPackageNames = glob(
 ).map( ( fileName ) => fileName.split( '/' )[ 3 ] );
 
 module.exports = {
-	verbose: true,
 	rootDir: '.',
 	// Automatically clear mock calls and instances between every test
 	clearMocks: true,
@@ -50,12 +49,14 @@ module.exports = {
 		'\\.(scss)$': '<rootDir>/' + configPath + '/__mocks__/styleMock.js',
 		'\\.(jpg|jpeg|png|gif|eot|otf|webp|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
 			'<rootDir>/' + configPath + '/__mocks__/fileMock.js',
-		[ `@wordpress\\/(${ transpiledPackageNames.join(
-			'|'
-		) })$` ]: '<rootDir>/gutenberg/packages/$1/src',
+		[ `@wordpress\\/(${ transpiledPackageNames.join( '|' ) })$` ]:
+			'<rootDir>/gutenberg/packages/$1/src',
 		'test/helpers$': '<rootDir>/' + configPath + '/helpers.js',
 		jetpackConfig:
 			'<rootDir>/jetpack/tools/js-tools/jest/jest-jetpack-config.js',
+		// Workaround for Jest not having ESM support yet
+		// Reference: https://t.ly/9ap_
+		uuid: require.resolve( 'uuid' ),
 	},
 	haste: {
 		defaultPlatform: rnPlatform,
@@ -72,4 +73,8 @@ module.exports = {
 		'node_modules/(?!(simple-html-tokenizer|@react-native-community|(jest-)?react-native|@react-native|react-clone-referenced-element|is-plain-obj))',
 	],
 	reporters: [ 'default', 'jest-junit' ],
+	watchPlugins: [
+		'jest-watch-typeahead/filename',
+		'jest-watch-typeahead/testname',
+	],
 };
